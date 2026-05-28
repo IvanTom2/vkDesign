@@ -1,3 +1,4 @@
+import json
 from typing import Any
 import base64
 import mimetypes
@@ -110,6 +111,96 @@ class GeminiClient:
             },
         }
         return self._post(url, params, payload)
+
+    def edit_image_stream(
+        self,
+        prompt,
+        image_path,
+        model: str = "gemini-2.5-flash-image",
+    ):
+        import base64
+        import mimetypes
+
+        _log(f"edit_image_stream: model={model}, file={image_path}")
+        raw = image_path.read_bytes()
+        encoded = base64.b64encode(raw).decode("utf-8")
+        mime = mimetypes.guess_type(image_path.name)[0] or "image/png"
+        _log(f"картинка готова: {len(raw)} байт")
+
+        # ключевое отличие: :streamGenerateContent + alt=sse
+        url = f"{self._base_url}/{model}:streamGenerateContent"
+        params = {"key": self._api_key, "alt": "sse"}
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {"inline_data": {"mime_type": mime, "data": encoded}},
+                    ]
+                }
+            ],
+            "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]},
+        }
+
+        _log(f"POST (stream) -> {model}:streamGenerateContent")
+        start = time.monotonic()
+
+        # stream=True — вот что включает потоковое чтение
+        with self._session.post(
+            url, params=params, json=payload, timeout=self._timeout, stream=True
+        ) as response:
+            _log(
+                f"соединение открыто, статус {response.status_code} за "
+                f"{time.monotonic() - start:.1f}s"
+            )
+            if response.status_code != 200:
+                _log(f"Error: {response.text[:500]}")
+                response.raise_for_status()
+
+            collected = []
+            chunk_count = 0
+            for line in response.iter_lines():
+                if not line:
+                    continue
+                chunk_count += 1
+                elapsed = time.monotonic() - start
+                # SSE-формат: строки вида "data: {...}"
+                text = line.decode("utf-8")
+                if text.startswith("data: "):
+                    text = text[len("data: ") :]
+                try:
+                    chunk = json.loads(text)
+                    collected.append(chunk)
+                    # показываем, что чанк пришёл (без портянки base64)
+                    size = len(line)
+                    _log(f"чанк #{chunk_count} получен ({size} байт) на {elapsed:.1f}s")
+                except json.JSONDecodeError:
+                    _log(f"чанк #{chunk_count}: не JSON, {len(line)} байт")
+
+            _log(
+                f"стрим завершён: {chunk_count} чанков за "
+                f"{time.monotonic() - start:.1f}s"
+            )
+
+        # собираем чанки в один ответ-словарь, совместимый с save_image
+        return self._merge_stream_chunks(collected)
+
+    def _merge_stream_chunks(self, chunks: list) -> dict:
+        """Склеивает чанки стрима в единый response, как у обычного generateContent."""
+        merged_parts = []
+        usage = {}
+        for ch in chunks:
+            cands = ch.get("candidates", [])
+            if cands:
+                parts = cands[0].get("content", {}).get("parts", [])
+                merged_parts.extend(parts)
+            if "usageMetadata" in ch:
+                usage = ch["usageMetadata"]  # последний обычно полный
+
+        return {
+            "candidates": [{"content": {"parts": merged_parts}}],
+            "usageMetadata": usage,
+        }
 
     def extract_text(self, response: dict[str, Any]) -> str:
         try:
