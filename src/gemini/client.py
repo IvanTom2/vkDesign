@@ -87,6 +87,7 @@ class GeminiClient:
         prompt: str,
         image_path: Path,
         model: str = "gemini-2.5-flash-image",
+        temperature: float = 0.1,
     ) -> dict[str, Any]:
         _log(f"edit_image: model={model}, file={image_path}")
         _log("читаю и кодирую картинку...")
@@ -96,7 +97,9 @@ class GeminiClient:
         _log(f"картинка готова: {len(raw)} байт, mime={mime}")
 
         url = f"{self._base_url}/{model}:generateContent"
-        params = {"key": self._api_key}
+        params = {
+            "key": self._api_key,
+        }
         payload = {
             "contents": [
                 {
@@ -107,7 +110,8 @@ class GeminiClient:
                 }
             ],
             "generationConfig": {
-                "responseModalities": ["TEXT", "IMAGE"],
+                "responseModalities": ["IMAGE"],
+                "temperature": temperature,
             },
         }
         return self._post(url, params, payload)
