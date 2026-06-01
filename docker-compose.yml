@@ -1,0 +1,38 @@
+# Локальная инфраструктура на нестандартных портах (не конфликтует с системными сервисами).
+# PostgreSQL: localhost:15433
+# RabbitMQ AMQP: localhost:5673
+# RabbitMQ UI: http://localhost:15673  (guest / guest)
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: vkaudit
+      POSTGRES_PASSWORD: vkaudit
+      POSTGRES_DB: vkaudit
+    ports:
+      - "15433:5432"
+    volumes:
+      - postgres_data_vkdesign:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vkaudit -d vkaudit"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    volumes:
+      - rabbitmq_data_vkdesign:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data_vkdesign:
+  rabbitmq_data_vkdesign:
