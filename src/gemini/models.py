@@ -5,4 +5,4 @@ from pydantic import Field
 
 
 class GeminiResponseDTO(BaseModel):
-    json: dict[str, Any] = Field(default_factory=dict)
+    raw_json: dict[str, Any] = Field(default_factory=dict)

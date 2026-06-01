@@ -84,7 +84,7 @@ class GeminiClient:
             payload["generationConfig"]["response_mime_type"] = "application/json"
         json = self._post(url, params, payload)
         return GeminiResponseDTO(
-            json=json,
+            raw_json=json,
         )
 
     def edit_image(
@@ -92,7 +92,7 @@ class GeminiClient:
         prompt: str,
         image_path: Path,
         model: str = "gemini-2.5-flash-image",
-        temperature: float = 0.1,
+        temperature: float | None = None,
     ) -> dict[str, Any]:
         _log(f"edit_image: model={model}, file={image_path}")
         _log("читаю и кодирую картинку...")
@@ -105,6 +105,7 @@ class GeminiClient:
         params = {
             "key": self._api_key,
         }
+        add_temp = {"temperature": temperature} if temperature is not None else {}
         payload = {
             "contents": [
                 {
@@ -116,7 +117,7 @@ class GeminiClient:
             ],
             "generationConfig": {
                 "responseModalities": ["IMAGE"],
-                "temperature": temperature,
+                **add_temp,
             },
         }
         return self._post(url, params, payload)
@@ -156,7 +157,11 @@ class GeminiClient:
 
         # stream=True — вот что включает потоковое чтение
         with self._session.post(
-            url, params=params, json=payload, timeout=self._timeout, stream=True
+            url,
+            params=params,
+            json=payload,
+            timeout=self._timeout,
+            stream=True,
         ) as response:
             _log(
                 f"соединение открыто, статус {response.status_code} за "

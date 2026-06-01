@@ -10,6 +10,7 @@ from src.domain.generator.models import ImageGenerationContextDTO
 from src.domain.generator.models import StyleContextDTO
 from src.domain.generator.service import ImageGeneratorServiceGeminiBase
 from src.domain.generator.service import ImageGeneratorServiceGeminiDynamicCreativeV3
+from src.domain.generator.service import ImageGeneratorServiceGeminiDynamicCreativeV5
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -161,6 +162,150 @@ def dynamic_creative_prompt_v3(
         """
 
 
+def dynamic_creative_prompt_v4(
+    niche: str,
+    company_name: str,
+    utp: str,
+    phone: str,
+    # Например: "Futuristic hi-tech", "Minimalist luxury"
+    style_description: str | None = None,
+    # Например: "Deep obsidian black, electric neon blue, clean white"
+    color_palette: str | None = None,
+    # Например: "Futuristic bold geometry", "Elegant fine serif"
+    font_character: str | None = None,
+) -> str:
+    style_block = f"- VISUAL STYLE: {style_description if style_description else f'Automatically select the most professional, high-converting modern visual style that perfectly matches the business domain of {niche}.'}\n"
+    style_block += f"- COLOR PALETTE: {color_palette if color_palette else 'Choose a clean, high-contrast palette of 2-3 matching corporate colors tailored to the niche. Do NOT copy the original green/blue nature palette unless requested.'}\n"
+    style_block += f"- TYPOGRAPHY STYLE: {font_character if font_character else 'Use premium, highly legible modern corporate typography suitable for the theme.'}"
+    return f"""
+        You are a senior UI/UX production designer. Your primary constraint is to treat the provided image as an EXACT pixel-perfect layout grid (blueprint). You must NEVER change the positions, boundaries, shapes, or scale of the visual blocks. Your creative freedom applies ONLY to replacing the inner content, assets, and stylistic execution to match the brand parameters below.
+
+        BRAND STYLISTS & PARAMETERS:
+        {style_block}
+        - BUSINESS DOMAIN / NICHE: "{niche}"
+
+        STRICT LAYOUT & CONSISTENCY RULES:
+        1. COMPOSITION RETENTION (Do NOT alter the layout framework):
+        - Top center: White text "ОФОРМЛЕНИЕ ГРУППЫ" and the VK logo badge.
+        - Main banner: Horizontal rounded rectangle (Desktop Cover).
+        - Menu bar: 4 horizontal buttons right under the banner.
+        - Avatar: Large circle on the right.
+        - Bottom area: 3 large vertical cards with 3D depth effect (Widgets).
+        - Device: A modern smartphone on the right mirroring the layout.
+        - Bottom-left corner: Keep the exact watermark signature text "Зарипов SMM Графический Дизайнер".
+
+        2. FIXED MENUS & THEME UNIFICATION:
+        - MENU BUTTONS BACKGROUND: All 4 horizontal buttons MUST share the EXACT SAME identical background texture, pattern, and color. Do not vary the backgrounds between buttons. They must look like a unified set. Inside them, place relevant 3D icons tailored to "{niche}".
+        - THREE BOTTOM WIDGET CARDS BACKGROUND: Their backgrounds must create a unified continuous panorama (a single seamless abstract theme or texture split across 3 vertical panels), maintaining coherent lighting.
+
+        3. DETAILED CONTENT & COMPONENT FIXES (Strictly customized for "{niche}"):
+
+        - MAIN BANNER (DESKTOP COVER): 
+        * Completely wipe out the original house and septic tanks. Render a completely new, visually stunning environment and premium 3D objects/assets on the right side that instantly symbolize "{niche}".
+        * TYPOGRAPHY HIERARCHY: On the left, print the company name "{company_name}" in a prominent, large, bold typography using the defined TYPOGRAPHY STYLE. Below it, the UTP sub-text "{utp}" must be rendered in a smaller, clean, highly legible font size so it looks balanced and professional.
+        * PHONE NUMBER CAPSULE: The phone number "{phone}" must be placed at the bottom of the text block and enclosed inside a beautiful, stylized graphic container (like a rounded pill-badge or contrasting accent plate) to stand out elegantly.
+        * THE RED DASHED LINE (CRITICAL TECHNICAL RULE): Keep the thin red dashed line exactly in the same position as the original blueprint. This is a technical safe-zone marker. Everything ABOVE this red dashed line must be clean, empty background (sky or clean abstract texture). Absolutely NO text, NO logos, and NO parts/tops of the main 3D objects are allowed to cross or exist above this red line.
+
+        - DYNAMIC 3D WIDGET ICONS (Form variety rule):
+        * Inside the 3 bottom vertical cards, you must render distinct, custom-shaped high-quality 3D icons (traditionally a Question Mark, a Calculator, and a Currency/Ruble symbol).
+        * CRITICAL: Do NOT copy the standard generic shapes from the original image. Dynamically redesign and morph the geometry of these three 3D shapes to integrate elements of "{niche}". (For example: if niche is auto-repair, merge the question mark with a wrench texture; if niche is real estate, make the calculator look like a stylized modern building blueprint). Give them unique volumetric shapes, custom glossy/matte textures, and unique thematic framing.
+
+        - SMARTPHONE DISPLAY (MOBILE COVER):
+        * The screen of the smartphone must display a dedicated Mobile Cover version for "{niche}" with vertically optimized framing. It must feature the same branding style, colors, and typography, with the main 3D object centrally framed.
+
+        Style: Clean commercial digital art, professional color grading matching the defined COLOR PALETTE, coherent studio lighting across all blocks, flawless execution of specific custom generated assets.
+        """
+
+
+def dynamic_creative_prompt_v5(
+    niche: str,
+    company_name: str,
+    utp: str,
+    phone: str,
+    style_description: str | None = None,
+    color_palette: str | None = None,
+    font_character: str | None = None,
+) -> str:
+    # 1. Базовый системный контекст
+    prompt_blocks = [
+        "You are a senior UI/UX production designer.",
+        "Your primary constraint is to treat the provided image as an EXACT pixel-perfect layout grid (blueprint).",
+        "You must NEVER change the positions, boundaries, shapes, or scale of the visual blocks.",
+        "Your creative freedom applies ONLY to replacing the inner content, assets, and stylistic execution to match the brand parameters.",
+        f'\nBUSINESS DOMAIN / NICHE: "{niche}"',
+    ]
+
+    # 2. Динамический блок стилистики (добавляется только при наличии данных)
+    style_section = []
+    if style_description:
+        style_section.append(f"- VISUAL STYLE: {style_description}")
+    else:
+        style_section.append(
+            f"- VISUAL STYLE: Automatically select the most professional, high-converting modern visual style that perfectly matches the business domain of {niche}."
+        )
+
+    if color_palette:
+        style_section.append(
+            f"- COLOR PALETTE: Strict compliance with colors: {color_palette}"
+        )
+
+    if font_character:
+        style_section.append(f"- TYPOGRAPHY STYLE: {font_character}")
+
+    prompt_blocks.append("\nBRAND STYLISTS & PARAMETERS:\n" + "\n".join(style_section))
+
+    # 3. Жесткие правила сохранения композиции
+    layout_rules = [
+        "\nSTRICT LAYOUT RETENTION RULES (Do NOT alter the framework):",
+        '- Top center: White text "ОФОРМЛЕНИЕ ГРУППЫ" and the VK logo badge.',
+        "- Main banner: Horizontal rounded rectangle (Desktop Cover).",
+        "- Menu bar: 4 horizontal buttons right under the banner.",
+        "- Avatar: Large circle on the right.",
+        "- Bottom area: 3 large vertical cards with 3D depth effect (Widgets).",
+        "- Device: A modern smartphone on the right mirroring the layout.",
+        '- Bottom-left corner: Keep the exact watermark signature text "Зарипов SMM Графический Дизайнер".',
+    ]
+    prompt_blocks.append("\n".join(layout_rules))
+
+    # 4. Правила унификации интерфейса (меню и виджеты)
+    unification_rules = [
+        "\nINTERFACE UNIFICATION RULES:",
+        "- MENU BUTTONS BACKGROUND: All 4 horizontal buttons MUST share the EXACT SAME identical background texture, pattern, and color. Do not vary the backgrounds between buttons. They must look like a unified set. Inside them, place relevant 3D icons tailored to the niche.",
+        "- THREE BOTTOM WIDGET CARDS BACKGROUND: Their backgrounds must create a unified continuous panorama (a single seamless abstract theme or texture split across 3 vertical panels), maintaining coherent lighting.",
+    ]
+    prompt_blocks.append("\n".join(unification_rules))
+
+    # 5. Детальная проработка контента (Текст, телефон, капсула, красная линия)
+    content_rules = [
+        f'\nDETAILED CONTENT FIXES (Strictly customized for "{niche}"):',
+        "\n- MAIN BANNER (DESKTOP COVER):",
+        "  * Completely wipe out the original house and septic tanks. Render a completely new, visually stunning environment and premium 3D objects/assets on the right side that instantly symbolize the niche.",
+        f'  * TYPOGRAPHY HIERARCHY: On the left, print the company name "{company_name}" in a prominent, large, bold typography. Below it, the UTP sub-text "{utp}" must be rendered in a smaller, clean, highly legible font size so it looks balanced and professional.',
+        f'  * PHONE NUMBER CAPSULE: The phone number "{phone}" must be placed at the bottom of the text block and enclosed inside a beautiful, stylized graphic container (like a rounded pill-badge or contrasting accent plate) to stand out elegantly.',
+        "  * THE RED DASHED LINE (CRITICAL TECHNICAL RULE): Keep the thin red dashed line exactly in the same position as the original blueprint. This is a technical safe-zone marker. Everything ABOVE this red dashed line must be clean, empty background (sky or clean abstract texture). Absolutely NO text, NO logos, and NO parts/tops of the main 3D objects are allowed to cross or exist above this red line.",
+    ]
+    prompt_blocks.append("\n".join(content_rules))
+
+    # 6. Правило для динамических 3D-форм виджетов
+    widget_shapes = [
+        "\n- DYNAMIC 3D WIDGET ICONS (Form variety rule):",
+        "  * Inside the 3 bottom vertical cards, you must render distinct, custom-shaped high-quality 3D icons (traditionally a Question Mark, a Calculator, and a Currency/Ruble symbol).",
+        f'  * CRITICAL: Do NOT copy the standard generic shapes from the original image. Dynamically redesign and morph the geometry of these three 3D shapes to integrate elements of "{niche}". (For example: if niche is auto-repair, merge the question mark with a wrench texture; if niche is real estate, make the calculator look like a stylized modern building blueprint). Give them unique volumetric shapes, custom glossy/matte textures, and unique thematic framing.',
+    ]
+    prompt_blocks.append("\n".join(widget_shapes))
+
+    # 7. Адаптив под смартфон и финальный стиль
+    final_blocks = [
+        "\n- SMARTPHONE DISPLAY (MOBILE COVER):",
+        f'  * The screen of the smartphone must display a dedicated Mobile Cover version for "{niche}" with vertically optimized framing. It must feature the same branding style, colors, and typography, with the main 3D object centrally framed.',
+        f"\nStyle: Clean commercial digital art, professional color grading matching the chosen niche theme, coherent studio lighting across all blocks, flawless execution of specific custom generated assets.",
+    ]
+    prompt_blocks.append("\n".join(final_blocks))
+
+    # Собираем всё в один финальный промпт через перенос строки
+    return "\n".join(prompt_blocks)
+
+
 def main_test():
     log("=== START ===")
     with GeminiClient(
@@ -170,13 +315,15 @@ def main_test():
         # MODEL = "gemini-3.1-flash-image-preview" # NANO BANANA 2
         MODEL = "gemini-3-pro-image-preview"  # NANO BANANA PRO
 
-        TEMPERATURE = 0.1
+        # TEMPERATURE = 0.1
         # TEMPERATURE = 0.4
-        # TEMPERATURE = 0.7
+        TEMPERATURE = 0.7
         # TEMPERATURE = 1.0
 
         # IMAGE_PATH = Path("/home/ivan/Projects/vkDesign/Макет-2-1.png")
         IMAGE_PATH = Path("/home/ivan/Projects/vkDesign/Макет-2-1.jpg")
+
+        SAVE_PATH = Path("/home/ivan/Projects/vkDesign/output.png")
 
         # PROMPT = simple_prompt_v1(
         #     "Строительство домов",
@@ -196,7 +343,19 @@ def main_test():
         #     "Строим дома из газобетона за 1 месяц от фундамента до крыши",
         #     "+7 (495) 123-45-67",
         # )
-        PROMPT = dynamic_creative_prompt_v3(
+        # PROMPT = dynamic_creative_prompt_v3(
+        #     "Строительство домов",
+        #     "СК Дом и Дача",
+        #     "Строим дома из газобетона за 1 месяц от фундамента до крыши",
+        #     "+7 (495) 123-45-67",
+        # )
+        # PROMPT = dynamic_creative_prompt_v4(
+        #     "Строительство домов",
+        #     "СК Дом и Дача",
+        #     "Строим дома из газобетона за 1 месяц от фундамента до крыши",
+        #     "+7 (495) 123-45-67",
+        # )
+        PROMPT = dynamic_creative_prompt_v5(
             "Строительство домов",
             "СК Дом и Дача",
             "Строим дома из газобетона за 1 месяц от фундамента до крыши",
@@ -215,7 +374,7 @@ def main_test():
         log("текст модели:")
         print(gem.extract_text(resp))
 
-        ok = gem.save_image(resp, "output.png")
+        ok = gem.save_image(resp, SAVE_PATH)
         log("saved" if ok else "failed")
 
         cost = estimate_cost(resp, MODEL)
@@ -225,7 +384,7 @@ def main_test():
 
 
 def main():
-    TEMPERATURE = None  # 0.7
+    TEMPERATURE = 0.7  # 0.7
     MODEL = "gemini-3-pro-image-preview"  # NANO BANANA PRO
     TEST_SAVE_PATH = PROJ_DIR / "output.png"
 
@@ -233,22 +392,23 @@ def main():
         api_key=settings.GEMINI_API_KEY,
         proxy_url=settings.PROXY_URL,
     )
-    service = ImageGeneratorServiceGeminiDynamicCreativeV3(
+    service = ImageGeneratorServiceGeminiDynamicCreativeV5(
         model=MODEL,
         gemini=gemini,
-        name="Gemini Dynamic Creative V3",
+        name="Gemini Dynamic Creative V5",
+        layout_path=PROJ_DIR / "Макет-2-1.jpg",
         temperature=TEMPERATURE,
     )
     with service as gen:
         style_ctx = StyleContextDTO(
             style=None,
-            colors=None,
+            colors="green",
             fonts=None,
         )
         context = ImageGenerationContextDTO(
-            niche="Строительство частных домов",
-            company_name="СК Дом и Дача",
-            utp="Дома и бани в срок!",
+            niche="Септики и автономные канализации",
+            company_name="Септик Малахит",
+            utp="Автономные канализации без запаха!",
             phone="+7-901-220-79-67",
             location="Тверская область",
             style=style_ctx,
