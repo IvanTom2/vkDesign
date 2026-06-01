@@ -3,17 +3,18 @@ from typing import Any
 import base64
 import mimetypes
 import time
-from datetime import datetime
 from pathlib import Path
 
 import requests
 
+from logger import logger
 from src.gemini.models import GeminiResponseDTO
+
+_log_bound = logger.bind(component="GeminiClient")
 
 
 def _log(msg: str) -> None:
-    ts = datetime.now().strftime("%H:%M:%S")
-    print(f"[{ts}] {msg}", flush=True)
+    _log_bound.debug(msg)
 
 
 class GeminiClient:

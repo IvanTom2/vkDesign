@@ -3,6 +3,8 @@ from abc import ABC
 from abc import abstractmethod
 from pathlib import Path
 
+from logger import ILogger
+from logger import logger as _default_logger
 from src.gemini.client import GeminiClient
 from src.gemini.models import GeminiResponseDTO
 from src.domain.generator.models import ImageResultDTO
@@ -19,10 +21,12 @@ class IImageGeneratorService(ABC):
         name: str,
         layout_path: Path,
         temperature: float | None = None,
+        logger: ILogger | None = None,
     ) -> None:
         self._name = name
         self._layout_path = layout_path
         self._temperature = temperature
+        self._logger = (logger or _default_logger).bind(component=name)
 
     @abstractmethod
     def prompt(self, context: ImageGenerationContextDTO) -> str:
@@ -45,8 +49,9 @@ class ImageGeneratorServiceGeminiBase(IImageGeneratorService):
         name: str,
         layout_path: Path,
         temperature: float | None = None,
+        logger: ILogger | None = None,
     ) -> None:
-        super().__init__(name, layout_path, temperature)
+        super().__init__(name, layout_path, temperature, logger)
         self._model = model
         self._gemini = gemini
 
@@ -129,7 +134,7 @@ class ImageGeneratorServiceGeminiBase(IImageGeneratorService):
         resp = GeminiResponseDTO(raw_json=data)
         text = self.extract_text(resp)
         if text:
-            print("Тектовый ответ модели:", text)
+            self._logger.info("model text response", text=text)
         saved = self.save_image(resp, save_path)
         if not saved:
             raise ImageNotSaved("Не удалось сохранить изображение")
