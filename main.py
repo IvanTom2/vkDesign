@@ -6,7 +6,15 @@ from settings import settings
 from src.gemini.client import GeminiClient
 from src.gemini.cost import estimate_cost
 
+from src.domain.generator.models import ImageGenerationContextDTO
+from src.domain.generator.models import StyleContextDTO
+from src.domain.generator.service import ImageGeneratorServiceGeminiBase
+from src.domain.generator.service import ImageGeneratorServiceGeminiDynamicCreativeV3
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+PROJ_DIR = Path(__file__).parent
 
 
 def log(msg: str) -> None:
@@ -153,7 +161,7 @@ def dynamic_creative_prompt_v3(
         """
 
 
-def main():
+def main_test():
     log("=== START ===")
     with GeminiClient(
         api_key=settings.GEMINI_API_KEY,
@@ -214,6 +222,40 @@ def main():
         log(f"cost: {cost}")
 
     log("=== END ===")
+
+
+def main():
+    TEMPERATURE = None  # 0.7
+    MODEL = "gemini-3-pro-image-preview"  # NANO BANANA PRO
+    TEST_SAVE_PATH = PROJ_DIR / "output.png"
+
+    gemini = GeminiClient(
+        api_key=settings.GEMINI_API_KEY,
+        proxy_url=settings.PROXY_URL,
+    )
+    service = ImageGeneratorServiceGeminiDynamicCreativeV3(
+        model=MODEL,
+        gemini=gemini,
+        name="Gemini Dynamic Creative V3",
+        temperature=TEMPERATURE,
+    )
+    with service as gen:
+        style_ctx = StyleContextDTO(
+            style=None,
+            colors=None,
+            fonts=None,
+        )
+        context = ImageGenerationContextDTO(
+            niche="Строительство частных домов",
+            company_name="СК Дом и Дача",
+            utp="Дома и бани в срок!",
+            phone="+7-901-220-79-67",
+            location="Тверская область",
+            style=style_ctx,
+        )
+        resp = gen.generate(context, TEST_SAVE_PATH)
+        print("Сгенерировано изображение через сервис:", resp.service_name)
+        print("Сохранено по пути:", resp.image_path)
 
 
 if __name__ == "__main__":

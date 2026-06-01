@@ -8,6 +8,8 @@ from pathlib import Path
 
 import requests
 
+from src.gemini.models import GeminiResponseDTO
+
 
 def _log(msg: str) -> None:
     ts = datetime.now().strftime("%H:%M:%S")
@@ -67,7 +69,7 @@ class GeminiClient:
         temperature: float = 0.1,
         max_tokens: int = 2048,
         response_json: bool = False,
-    ) -> dict[str, Any]:
+    ) -> GeminiResponseDTO:
         _log(f"request: model={model}")
         url = f"{self._base_url}/{model}:generateContent"
         params = {"key": self._api_key}
@@ -80,7 +82,10 @@ class GeminiClient:
         }
         if response_json:
             payload["generationConfig"]["response_mime_type"] = "application/json"
-        return self._post(url, params, payload)
+        json = self._post(url, params, payload)
+        return GeminiResponseDTO(
+            json=json,
+        )
 
     def edit_image(
         self,
@@ -218,8 +223,12 @@ class GeminiClient:
                 return f"Blocked by safety: {response['promptFeedback']}"
             return "Empty response from model"
 
-    def save_image(self, response: dict[str, Any], out_path: str | Path) -> bool:
-        _log(f"save_image -> {out_path}")
+    def save_image(
+        self,
+        response: dict[str, Any],
+        save_path: Path,
+    ) -> bool:
+        _log(f"save_image -> {save_path}")
         try:
             parts = response["candidates"][0]["content"]["parts"]
         except (KeyError, IndexError):
@@ -231,7 +240,7 @@ class GeminiClient:
             data = part.get("inlineData") or part.get("inline_data")
             if data and "data" in data:
                 img_bytes = base64.b64decode(data["data"])
-                Path(out_path).write_bytes(img_bytes)
+                Path(save_path).write_bytes(img_bytes)
                 _log(f"картинка сохранена: {len(img_bytes)} байт")
                 return True
         _log("No image in response")
