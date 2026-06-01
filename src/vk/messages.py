@@ -150,6 +150,36 @@ class VKResponderGateway:
 
         return self.upload_document_fallback(file_bytes, peer_id, title)
 
+    def upload_photo(
+        self,
+        file_bytes: bytes,
+        peer_id: int,
+        filename: str = "image.png",
+    ) -> str:
+        """Загружает изображение в диалог, возвращает attachment photo{owner}_{id}."""
+        if not file_bytes:
+            raise ValueError("file_bytes пустой!")
+
+        # шаг 1 — upload-сервер для фото в сообщениях
+        server = self._call("photos.getMessagesUploadServer", peer_id=peer_id)
+        upload_url = server["upload_url"]
+
+        # шаг 2 — POST файла на upload_url
+        files = {"photo": (filename, file_bytes, "application/octet-stream")}
+        up = self._client.post(upload_url, files=files, timeout=30)
+        up.raise_for_status()
+        uploaded = up.json()
+
+        # шаг 3 — сохранить фото
+        saved = self._call(
+            "photos.saveMessagesPhoto",
+            photo=uploaded["photo"],
+            server=uploaded["server"],
+            hash=uploaded["hash"],
+        )
+        photo = saved[0] if isinstance(saved, list) else saved
+        return f"photo{photo['owner_id']}_{photo['id']}"
+
     def respond_vk(
         self,
         message: str,

@@ -11,3 +11,7 @@ wheels/
 .env
 Пайплайн/
 *.zip
+
+# Сгенерированные медиа
+media/
+output.png
