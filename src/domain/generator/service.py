@@ -5,6 +5,8 @@ from pathlib import Path
 
 from src.gemini.client import GeminiClient
 from src.gemini.models import GeminiResponseDTO
+from src.openai.client import OpenAIImageClient
+from src.openai.models import OpenAIImageResponseDTO
 from src.domain.generator.models import ImageResultDTO
 from src.domain.generator.models import ImageGenerationContextDTO
 
@@ -309,3 +311,78 @@ class ImageGeneratorServiceGeminiDynamicCreativeV5(ImageGeneratorServiceGeminiBa
 
         # Собираем всё в один финальный промпт через перенос строки
         return "\n".join(prompt_blocks)
+
+
+class ImageGeneratorServiceOpenAIBase(IImageGeneratorService):
+    """Тот же контракт генерации, но через OpenAI Images API (gpt-image).
+
+    Промпты переиспользуются из Gemini-сервисов — они не зависят от клиента,
+    поэтому наследники ниже просто заимствуют нужный prompt().
+    """
+
+    def __init__(
+        self,
+        model: str,
+        openai: OpenAIImageClient,
+        name: str,
+        layout_path: Path,
+        temperature: float | None = None,
+        size: str = "auto",
+        quality: str = "auto",
+    ) -> None:
+        super().__init__(name, layout_path, temperature)
+        self._model = model
+        self._openai = openai
+        self._size = size
+        self._quality = quality
+
+    # базовый промпт совпадает с Gemini-версией — переиспользуем его
+    prompt = ImageGeneratorServiceGeminiBase.prompt
+
+    def save_image(
+        self,
+        response: OpenAIImageResponseDTO,
+        save_path: Path,
+    ) -> bool:
+        return self._openai.save_image(response, save_path)
+
+    def generate(
+        self,
+        context: ImageGenerationContextDTO,
+        save_path: Path,
+    ) -> ImageResultDTO:
+        prompt = self.prompt(context)
+        response = self._openai.edit_image(
+            prompt=prompt,
+            image_path=self._layout_path,
+            model=self._model,
+            size=self._size,
+            quality=self._quality,
+        )
+        saved = self.save_image(response, save_path)
+        if not saved:
+            raise ImageNotSaved("Не удалось сохранить изображение")
+        return ImageResultDTO(
+            service_name=self._name,
+            prompt=prompt,
+            image_path=save_path,
+        )
+
+    def close(self) -> None:
+        self._openai._session.close()
+
+    def __enter__(self):
+        self._openai.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._openai.__exit__(exc_type, exc_val, exc_tb)
+        self.close()
+
+
+class ImageGeneratorServiceOpenAIDynamicCreativeV3(ImageGeneratorServiceOpenAIBase):
+    prompt = ImageGeneratorServiceGeminiDynamicCreativeV3.prompt
+
+
+class ImageGeneratorServiceOpenAIDynamicCreativeV5(ImageGeneratorServiceOpenAIBase):
+    prompt = ImageGeneratorServiceGeminiDynamicCreativeV5.prompt
