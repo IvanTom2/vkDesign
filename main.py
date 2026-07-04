@@ -14,7 +14,9 @@ from src.domain.generator.service import ImageGeneratorServiceGeminiDynamicCreat
 from src.domain.generator.service import ImageGeneratorServiceGeminiDynamicCreativeV5
 from src.domain.generator.service import ImageGeneratorServiceGeminiDynamicCreativeV6
 from src.domain.generator.service import ImageGeneratorServiceGeminiDynamicCreativeV7
-from src.domain.generator.service import ImageGeneratorServiceGeminiFixedPrompt
+from src.domain.generator.service import ImageGeneratorServiceOpenAIBase
+
+from src.openai.client import OpenAIImageClient
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -387,75 +389,75 @@ def main_test():
     log("=== END ===")
 
 
-def main():
-    TEMPERATURE = 0.7  # 0.7
-    MODEL = "gemini-3-pro-image-preview"  # NANO BANANA PRO
-    TEST_SAVE_PATH = PROJ_DIR / "output.png"
-
+def gemini_service(model: str, temperature: float) -> ImageGeneratorServiceGeminiBase:
     gemini = GeminiClient(
         api_key=settings.GEMINI_API_KEY,
         proxy_url=settings.PROXY_URL,
     )
     service = ImageGeneratorServiceGeminiDynamicCreativeV6(
-        model=MODEL,
+        model=model,
         gemini=gemini,
         name="Gemini Dynamic Creative V6",
         layout_path=PROJ_DIR / "Макет-2-1.jpg",
-        temperature=TEMPERATURE,
+        temperature=temperature,
     )
     service = ImageGeneratorServiceGeminiDynamicCreativeV7(
-        model=MODEL,
+        model=model,
         gemini=gemini,
         name="Gemini Dynamic Creative V7",
         layout_path=PROJ_DIR / "Макет-2-1.jpg",
-        temperature=TEMPERATURE,
+        temperature=temperature,
     )
+    return service
+
+
+def gpt_serive(model: str, temperature: float) -> ImageGeneratorServiceOpenAIBase:
+    client = OpenAIImageClient(
+        api_key=settings.OPENAI_API_KEY, proxy_url=settings.PROXY_URL
+    )
+    return ImageGeneratorServiceOpenAIBase(
+        model=model,
+        openai=client,
+        name="OpenAI Image Generation Service",
+        layout_path=PROJ_DIR / "Макет-2-2.png",
+        temperature=temperature,
+        quality="high",
+    )
+
+
+def get_context() -> ImageGenerationContextDTO:
+    style_ctx = StyleContextDTO(
+        style="Современный премиум-стиль с фотореалистичными 3D-объектами, чистыми линиями и коммерческой эстетикой. Высокая проработка деталей.",
+        colors="Приятные желтые цвета",
+        fonts=None,
+    )
+    components_ctx = ComponentsContextDTO(
+        menu=["Акции", "Хранение", "Отзывы", "Контакты"],
+        widgets=["Ассортимент", "Акции", "Задать вопрос"],
+    )
+    context = ImageGenerationContextDTO(
+        niche="Доставка еды",
+        company_name="Унаги",
+        company_description="Доставка вкусных роллов и суши в Перми. Свежие ингредиенты, быстрый сервис, отличные отзывы!",
+        utp="Унаги - вкус Японии с доставкой на дом!",
+        phone="+7 (963) 881-44-13",
+        location="Пермь",
+        style=style_ctx,
+        components=components_ctx,
+    )
+    return context
+
+
+def main():
+    TEMPERATURE = 0.7  # 0.7
+    MODEL = "gemini-3-pro-image-preview"  # NANO BANANA PRO
+    TEST_SAVE_PATH = PROJ_DIR / "output.png"
+
+    # service = gemini_service(model=MODEL, temperature=TEMPERATURE)
+    service = gpt_serive(model="gpt-image-2", temperature=TEMPERATURE)
+
     with service as gen:
-        style_ctx = StyleContextDTO(
-            style=None,
-            colors=None,
-            fonts=None,
-        )
-        # context = ImageGenerationContextDTO(
-        #     niche="Септики и автономные канализации",
-        #     company_name="Септик Малахит",
-        #     utp="Автономные канализации без запаха!",
-        #     phone="+7-901-220-79-67",
-        #     location="Тверская область",
-        #     style=style_ctx,
-        # )
-
-        style_ctx = StyleContextDTO(
-            style="Современный премиум-стиль с фотореалистичными 3D-объектами, чистыми линиями и коммерческой эстетикой. Высокая проработка деталей.",
-            colors="Приятные желтые цвета",
-            fonts=None,
-        )
-        components_ctx = ComponentsContextDTO(
-            menu=["Акции", "Хранение", "Отзывы", "Контакты"],
-            widgets=["Ассортимент", "Акции", "Задать вопрос"],
-        )
-        context = ImageGenerationContextDTO(
-            niche="Лакомства для собак",
-            company_name="Сушки для зверюшки",
-            utp="Натуральные домашние лакомства!",
-            phone="+7 (963) 881-44-13",
-            location="Пермь",
-            style=style_ctx,
-            components=components_ctx,
-        )
-        context = ImageGenerationContextDTO(
-            niche="Доставка еды",
-            company_name="Унаги",
-            company_description="Доставка вкусных роллов и суши в Перми. Свежие ингредиенты, быстрый сервис, отличные отзывы!",
-            utp="Унаги - вкус Японии с доставкой на дом!",
-            phone="+7 (963) 881-44-13",
-            location="Пермь",
-            style=style_ctx,
-            components=components_ctx,
-        )
-
-        # prompt = gen.prompt(context)
-        # print(prompt)
+        context = get_context()
 
         resp = gen.generate(context, TEST_SAVE_PATH)
         print("Сгенерировано изображение через сервис:", resp.service_name)
