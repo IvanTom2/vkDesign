@@ -6,6 +6,7 @@ from pydantic_settings import SettingsConfigDict
 
 class Settings(BaseSettings):
     GEMINI_API_KEY: str
+    OPENAI_API_KEY: str = ""
     PROXY_URL: str
 
     database_url: str = (
