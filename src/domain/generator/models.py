@@ -15,10 +15,16 @@ class StyleContextDTO(BaseModel):
     fonts: str | None = None  # Описание шрифтов
 
 
+class ComponentsContextDTO(BaseModel):
+    menu: list[str] | None = Field(default=None, description="Список пунктов меню")
+    widgets: list[str] | None = Field(default=None, description="Список виджетов")
+
+
 class ImageGenerationContextDTO(BaseModel):
     niche: str
     company_name: str
 
+    company_description: str | None = None
     utp: str | None = None
     phone: str | None = None
     location: str | None = None
@@ -27,4 +33,8 @@ class ImageGenerationContextDTO(BaseModel):
         style=None,
         colors=None,
         fonts=None,
+    )
+    components: ComponentsContextDTO = ComponentsContextDTO(
+        menu=None,
+        widgets=None,
     )
