@@ -23,8 +23,9 @@ class ComponentsContextDTO(BaseModel):
 class ImageGenerationContextDTO(BaseModel):
     niche: str
     company_name: str
-
     company_description: str | None = None
+
+    header: str | None = None
     utp: str | None = None
     phone: str | None = None
     location: str | None = None
